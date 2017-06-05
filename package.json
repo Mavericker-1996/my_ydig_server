@@ -1,0 +1,26 @@
+{
+  "name": "my_ydig_server",
+  "version": "0.0.1",
+  "description": "你画我猜 server端",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ridesky/my_ydig_server.git"
+  },
+  "author": "Ridesky",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ridesky/my_ydig_server/issues"
+  },
+  "homepage": "https://github.com/ridesky/my_ydig_server#readme",
+  "dependencies": {
+    "express": "^4.15.3",
+    "socket.io": "^2.0.2"
+  },
+  "devDependencies": {
+    "babel-preset-env": "^1.5.1"
+  }
+}
