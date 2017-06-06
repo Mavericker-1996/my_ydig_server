@@ -3,7 +3,10 @@ var allRoomInfo = []// 房间信息统计
 var allRoomID = [];// 保存所有房间的ID
 module.exports = {
     provideRoomInfo: function (socket, io) {
-        socket.emit('updateAllroomInfo', JSON.stringify(allRoomInfo));//home页开启时 提供所有房间信息
+        socket.emit('updateAllroomInfo', JSON.stringify(allRoomInfo));//index.html页开启时 提供所有房间信息
+        socket.on('updateAllroomInfo', () => {
+            socket.emit('updateAllroomInfo', JSON.stringify(allRoomInfo));
+        })
     },
     createRoom: function (socket, io) {
         socket.on('createRoom', function (roomInfo) {
@@ -13,11 +16,12 @@ module.exports = {
             }
             roomInfo.roomID = tempID; // roomid 赋值
             roomInfo.ownerIP = socket.handshake.address; // 将连接的socket端ip添加到对象中
-             roomInfo[tempID]=[];
-            roomInfo[tempID].push({
-                player: roomInfo.owner,
-                playerIP: roomInfo.ownerIP,
-            });
+            roomInfo.maxNumbers = 2;
+            roomInfo[tempID] = [];
+            // roomInfo[tempID].push({
+            //     player: roomInfo.owner,
+            //     playerIP: roomInfo.ownerIP,
+            // });
             allRoomInfo.push(roomInfo); // push到所有房间信息的数组
             io.sockets.emit('updateAllroomInfo', JSON.stringify(allRoomInfo)); // 发送广播 告知room客户端有新房间创建
             allRoomID.push(roomInfo.roomID);
@@ -25,19 +29,72 @@ module.exports = {
             socket.send(JSON.stringify(roomInfo)); // 将该房间返回给客户端
         });
     },
-    exitRoom: function (socket,io) {
+    exitRoom: function (socket, io) {
         socket.on('exitRoom', function () { // 监听 '手动restart事件'
-            // socket.leave() // 离开room 事件 记得修改
-            console.log('触发exitRoom');
-
+            console.log('触发exitRoom事件');
+            if (socket.PLAYER_INFO) {
+                console.log('socket用户信息为:');
+                console.log(socket.PLAYER_INFO);
+                socket.leave(socket.PLAYER_INFO.USER_ROOM_ID); // 从socket.io的room中移除  
+                var currentRoomIndex = null; // 获取当前房间索引
+                var currentRoom = allRoomInfo.find((room, index) => { // 获取当前房间对象
+                    if (socket.PLAYER_INFO.USER_ROOM_ID in room) {
+                        currentRoomIndex = index; // 将当前索引赋值
+                        return socket.PLAYER_INFO.USER_ROOM_ID in room;
+                    }
+                });
+                console.log('此时的allroominfo的值为:');
+                console.log(allRoomInfo);
+                console.log('获取当前房间对象之后 currentRoom的值为:');
+                console.log(currentRoom);
+                var userIndex = currentRoom[socket.PLAYER_INFO.USER_ROOM_ID].findIndex(userInfo => {//从当前房间对象中的id key值数组获取index
+                    return userInfo.playerIP === socket.PLAYER_INFO.USER_IP;
+                });
+                console.log('userIndex 的值为:');
+                console.log(userIndex);
+                console.log('roomid 为:' + socket.PLAYER_INFO.USER_ROOM_ID);
+                currentRoom[socket.PLAYER_INFO.USER_ROOM_ID].splice(userIndex, 1);
+                if (currentRoom[socket.PLAYER_INFO.USER_ROOM_ID].length === 0) { // 判断房间是否已经没有人了
+                    allRoomInfo.splice(currentRoomIndex, 1); // 移除该房间
+                } else {
+                    currentRoom.owner = currentRoom[socket.PLAYER_INFO.USER_ROOM_ID][0].player;
+                    currentRoom.ownerIP = currentRoom[socket.PLAYER_INFO.USER_ROOM_ID][0].playerIP;
+                }
+                io.sockets.emit('updateAllroomInfo', JSON.stringify(allRoomInfo)); //广播所有socket allRoomInfo更新了
+            }
         })
     },
-    watchRoom: function (socket) {
+    watchRoom: function (socket,io) {
         socket.on('disconnect', function () {
             console.log('一个socket断开了连接,地址为: ' + socket.handshake.address);
+            if (socket.PLAYER_INFO) {
+                var currentRoomIndex = null; // 获取当前房间索引
+                var currentRoom = allRoomInfo.find((room, index) => { // 获取当前房间对象
+                    if (socket.PLAYER_INFO.USER_ROOM_ID in room) {
+                        currentRoomIndex = index; // 将当前索引赋值
+                        return socket.PLAYER_INFO.USER_ROOM_ID in room;
+                    }
+                });
+                console.log('此时的allroominfo的值为:');
+                console.log(allRoomInfo);
+                console.log('获取当前房间对象之后 currentRoom的值为:');
+                console.log(currentRoom);
+                var userIndex = currentRoom[socket.PLAYER_INFO.USER_ROOM_ID].findIndex(userInfo => {//从当前房间对象中的id key值数组获取index
+                    return userInfo.playerIP === socket.PLAYER_INFO.USER_IP;
+                });
+                console.log('userIndex 的值为:');
+                console.log(userIndex);
+                console.log('roomid 为:' + socket.PLAYER_INFO.USER_ROOM_ID);
+                currentRoom[socket.PLAYER_INFO.USER_ROOM_ID].splice(userIndex, 1);
+                if (currentRoom[socket.PLAYER_INFO.USER_ROOM_ID].length === 0) { // 判断房间是否已经没有人了
+                    allRoomInfo.splice(currentRoomIndex, 1); // 移除该房间
+                } else {
+                    currentRoom.owner = currentRoom[socket.PLAYER_INFO.USER_ROOM_ID][0].player;
+                    currentRoom.ownerIP = currentRoom[socket.PLAYER_INFO.USER_ROOM_ID][0].playerIP;
+                }
+                io.sockets.emit('updateAllroomInfo', JSON.stringify(allRoomInfo)); //广播所有socket allRoomInfo更新了
+            }
         })
     },
     allRoomInfo: allRoomInfo,
 }
-// exports.createRoom = 
-// exports.watchRoom = 
