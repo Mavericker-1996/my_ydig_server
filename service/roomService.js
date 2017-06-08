@@ -18,7 +18,7 @@ module.exports = {
             }
             roomInfo.roomID = tempID; // roomid 赋值
             roomInfo.ownerIP = socket.handshake.address; // 将连接的socket端ip添加到对象中
-            roomInfo.maxNumbers = 3;
+            roomInfo.maxNumbers = 6;
             roomInfo[tempID] = [];
             // roomInfo[tempID].push({
             //     player: roomInfo.owner,
@@ -98,9 +98,14 @@ module.exports = {
                 if (allRoomInfo.length === 0) {///出现未知bug  房间为空后又触发该事件
                     return;
                 }
-                var userIndex = currentRoom[socket.PLAYER_INFO.USER_ROOM_ID].findIndex(userInfo => {//从当前房间对象中的id key值数组获取index
-                    return userInfo.playerIP === socket.PLAYER_INFO.USER_IP;
-                });
+                try {
+                    var userIndex = currentRoom[socket.PLAYER_INFO.USER_ROOM_ID].findIndex(userInfo => {//从当前房间对象中的id key值数组获取index
+                        return userInfo.playerIP === socket.PLAYER_INFO.USER_IP;
+                    });
+                } catch (error) {
+                    console.log(error);
+                }
+
                 console.log('userIndex 的值为:');
                 console.log(userIndex);
                 if (userIndex < 0) { return; }// 如果用户索引不存在 直接return!!
