@@ -54,9 +54,16 @@ module.exports = {
                     if (allRoomInfo.length === 0) {///出现未知bug  房间为空后又触发该事件
                         return;
                     }
-                    var userIndex = currentRoom[socket.PLAYER_INFO.USER_ROOM_ID].findIndex(userInfo => {//从当前房间对象中的id key值数组获取index
-                        return userInfo.playerIP === socket.PLAYER_INFO.USER_IP;
-                    });
+
+                    try {
+                        var userIndex = currentRoom[socket.PLAYER_INFO.USER_ROOM_ID].findIndex(userInfo => {//从当前房间对象中的id key值数组获取index
+                            return userInfo.playerIP === socket.PLAYER_INFO.USER_IP;
+                        });
+                    } catch (error) {
+                        console.log('roomService 63行报错');
+                        console.log(error);
+                        return;
+                    }
                     console.log('userIndex 的值为:');
                     console.log(userIndex);
                     if (userIndex < 0) { return; }// 如果用户索引不存在 直接return!!
@@ -110,12 +117,18 @@ module.exports = {
                 console.log(userIndex);
                 if (userIndex < 0) { return; }// 如果用户索引不存在 直接return!!
                 console.log('roomid 为:' + socket.PLAYER_INFO.USER_ROOM_ID);
-                currentRoom[socket.PLAYER_INFO.USER_ROOM_ID].splice(userIndex, 1);
-                if (currentRoom[socket.PLAYER_INFO.USER_ROOM_ID].length === 0) { // 判断房间是否已经没有人了
-                    allRoomInfo.splice(currentRoomIndex, 1); // 移除该房间
-                } else {
-                    currentRoom.owner = currentRoom[socket.PLAYER_INFO.USER_ROOM_ID][0].player;
-                    currentRoom.ownerIP = currentRoom[socket.PLAYER_INFO.USER_ROOM_ID][0].playerIP;
+                try {
+                    currentRoom[socket.PLAYER_INFO.USER_ROOM_ID].splice(userIndex, 1);
+                    if (currentRoom[socket.PLAYER_INFO.USER_ROOM_ID].length === 0) { // 判断房间是否已经没有人了
+                        allRoomInfo.splice(currentRoomIndex, 1); // 移除该房间
+                    } else {
+                        currentRoom.owner = currentRoom[socket.PLAYER_INFO.USER_ROOM_ID][0].player;
+                        currentRoom.ownerIP = currentRoom[socket.PLAYER_INFO.USER_ROOM_ID][0].playerIP;
+                    }
+                } catch (error) {
+                    console.log('roomService 122行报错:')
+                    console.log(error);
+                    return;
                 }
                 io.sockets.emit('updateAllroomInfo', JSON.stringify(allRoomInfo)); //广播所有socket allRoomInfo更新了
                 // }catch(err){

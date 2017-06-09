@@ -24,7 +24,7 @@ module.exports = {
         })
     },
     gamePlaying: function (socket, io, allRoomInfo) {
-        var gameTimes = 6000000; // 设置游戏时间
+        var gameTimes = 1000000; // 设置游戏时间
         // var drawerIndex = 0;//初始化drawer成员的index
         try {
             socket.on('gamePlaying', (roomIndex) => {
@@ -93,13 +93,25 @@ module.exports = {
                             }
                         }
                     }, gameTimes)
+                    // drawing section
+                    socket.on('onDraw',data=>{
+                        try {
+                           var userIndex = currentRoom[currentRoom.roomID].findIndex(room=>{
+                                return socket.PLAYER_INFO.USER_IP === room.playerIP;
+                            })
+                            if(userIndex>=0){
+                                socket.to(currentRoom.roomID).emit('onDraw',data);
+                            }
+                        } catch (error) {
+                            console.log(error);
+                            return;
+                        }
+                    })
                 }
             })
 
         } catch (error) {
             console.log(error);
         }
-
-
     },
 }
