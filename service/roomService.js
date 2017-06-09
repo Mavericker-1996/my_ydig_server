@@ -5,8 +5,8 @@ module.exports = {
     provideRoomInfo: function (socket, io) {
         socket.emit('updateAllroomInfo', JSON.stringify(allRoomInfo));//index.html页开启时 提供所有房间信息
         socket.on('updateAllroomInfo', () => {
-            console.log('触发了updateAllroomInfo请求 此时的allRoomInfo数据为');
-            console.log(allRoomInfo);
+            // console.log('触发了updateAllroomInfo请求 此时的allRoomInfo数据为');
+            // console.log(allRoomInfo);
             socket.emit('updateAllroomInfo', JSON.stringify(allRoomInfo));
         })
     },
@@ -46,10 +46,10 @@ module.exports = {
                             return socket.PLAYER_INFO.USER_ROOM_ID in room;
                         }
                     });
-                    console.log('此时的allroominfo的值为:');
-                    console.log(allRoomInfo);
-                    console.log('获取当前房间对象之后 currentRoom的值为:');
-                    console.log(currentRoom);
+                    // console.log('此时的allroominfo的值为:');
+                    // console.log(allRoomInfo);
+                    // console.log('获取当前房间对象之后 currentRoom的值为:');
+                    // console.log(currentRoom);
 
                     if (allRoomInfo.length === 0) {///出现未知bug  房间为空后又触发该事件
                         return;

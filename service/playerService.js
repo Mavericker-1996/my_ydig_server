@@ -5,11 +5,11 @@ module.exports = {
             newUser = JSON.parse(newUser);
             console.log('newUser为');
             console.log(newUser);
-            console.log('playerService 中的 allroominfo为');
+            // console.log('playerService 中的 allroominfo为');
             console.log(allRoomInfo);
             var currentRoom = allRoomInfo[newUser.roomIndex] // 根据索引获取到当前房间
-            console.log('newUser.roomIndex的值为:'+ newUser.roomIndex);
-            console.log('然后currentRoom的值为')
+            // console.log('newUser.roomIndex的值为:'+ newUser.roomIndex);
+            // console.log('然后currentRoom的值为')
             console.log(currentRoom);
             if(currentRoom){
                 // if(socket.PLAYER_INFO && socket.PLAYER_INFO.USER_IP){return}//如果当前用户存在 则不执行下面代码
@@ -42,6 +42,8 @@ module.exports = {
                 currentRoom[currentRoom.roomID].push({
                     player: newUser.player,
                     playerIP: socket.handshake.address,
+                    score:0, // 记录初始积分
+                    answered:false,//标记答题状态
                 })
                 socket.PLAYER_INFO={}; // 将用户信息保存到对应的socket中
                 socket.PLAYER_INFO.USER_NAME = newUser.player;
