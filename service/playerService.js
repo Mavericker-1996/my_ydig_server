@@ -44,6 +44,8 @@ module.exports = {
                     playerIP: socket.handshake.address,
                     score:0, // 记录初始积分
                     answered:false,//标记答题状态
+                    topic:'',//初始化题目
+                    prompt:'',//初始化提示
                 })
                 socket.PLAYER_INFO={}; // 将用户信息保存到对应的socket中
                 socket.PLAYER_INFO.USER_NAME = newUser.player;

@@ -17,7 +17,6 @@ io.on('connection', function (socket) {
     playerService.updatePlayer(socket, io, roomService.allRoomInfo);
     gameService.beginGame(socket,io,roomService.allRoomInfo);
     gameService.gamePlaying(socket,io,roomService.allRoomInfo);
-    gameService.gameDrawing(socket,io,roomService.allRoomInfo);
 })
 http.listen(9999, error => {
     if (error) {
