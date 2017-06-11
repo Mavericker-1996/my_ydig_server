@@ -50,7 +50,7 @@ module.exports = {
         })
     },
     gamePlaying: function (socket, io, allRoomInfo) {
-        const gameTimes = 10000; // 设置游戏时间
+        const gameTimes = 10000000; // 设置游戏时间
         // var drawerIndex = 0;//初始化drawer成员的index
         var globalChangeDrawer = null;//??暂时搁置这里
         try {
@@ -172,8 +172,29 @@ module.exports = {
                 try {
                     console.log('触发sendAnswer');
                     var currentRoom = allRoomInfo[msg.roomIndex];//获取当前房间
-                    if (msg.answer === currentRoom.topic) {
+                    if (msg.answer === currentRoom.topic) { // 如果玩家回答的问题正确
+                        if(socket.PLAYER_INFO.USER_IP === currentRoom.drawerIP){return;}//画你的画,别捣乱
+                        var findUser = currentRoom[currentRoom.roomID].find(user=>{//寻找对应答题用户
+                            return socket.PLAYER_INFO.USER_IP === user.playerIP;
+                        })
+                        var findDrawer = currentRoom[currentRoom.roomID].find(user=>{
+                            return currentRoom.drawerIP === user.playerIP;
+                        })
+                        if(findUser.answered === false){// 判断用户是不是已经答过题了
+                            if(currentRoom.answerCount === 0){//判断是不是第一个答对题的人
+                                findUser.score+=2;//加2分
+                            }else{
+                                findUser.score++;//加1分
+                            }
+                            findDrawer.score++;//drawer加分
+                            findUser.answered = true;// 标记答题记录
+                            currentRoom.answerCount++;// 标记当前房间答对题的人数
+                        }
+                        
+                        io.to(currentRoom.roomID).emit('updateAllroomInfo', JSON.stringify(allRoomInfo));//广播当前房间 更新用户
+                        if(currentRoom.answerCount === currentRoom[currentRoom.roomID].length-1){
 
+                        }
                     } else {
                         socket.to(socket.PLAYER_INFO.USER_ROOM_ID).emit('rpsSendAnswer', msg.answer);
                     }
