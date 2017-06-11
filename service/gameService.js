@@ -52,9 +52,10 @@ module.exports = {
     gamePlaying: function (socket, io, allRoomInfo) {
         const gameTimes = 10000; // 设置游戏时间
         // var drawerIndex = 0;//初始化drawer成员的index
+        var globalChangeDrawer = null;//??暂时搁置这里
         try {
             socket.on('gamePlaying', (roomIndex) => {
-                var globalChangeDrawer = null;
+                var globalChangeDrawer = null;// 暂时挪到gamePlaying上方
                 var roundTime = null;//全局初始化轮数计时器
                 var rotateTimes = null;//全局初始化轮数
                 console.log('触发gamePlaying,来自: ' + socket.PLAYER_INFO.USER_NAME);
@@ -168,12 +169,16 @@ module.exports = {
                 };
             });
             socket.on('sendAnswer', msg => {// 接受消息
-                console.log('触发sendAnswer');
-                var currentRoom = allRoomInfo[msg.roomIndex];//获取当前房间
-                if (msg === currentRoom.topic) {
+                try {
+                    console.log('触发sendAnswer');
+                    var currentRoom = allRoomInfo[msg.roomIndex];//获取当前房间
+                    if (msg.answer === currentRoom.topic) {
 
-                } else {
-                    socket.to(socket.PLAYER_INFO.USER_ROOM_ID).emit('rpsSendAnswer', msg.answer);
+                    } else {
+                        socket.to(socket.PLAYER_INFO.USER_ROOM_ID).emit('rpsSendAnswer', msg.answer);
+                    }
+                } catch (error) {
+                    console.log(error)
                 }
             });
         } catch (error) {
