@@ -1,7 +1,7 @@
 "use strict";
 const fs = require('fs');
 const path = require('path');
-function sendTopic(currentRoom, io) {
+function sendTopic(currentRoom, io) {//发送答案
     try {
         var getLine;
         getLine = fs.readFileSync(path.resolve("./public/topic.txt"), "utf-8");
@@ -20,6 +20,12 @@ function sendTopic(currentRoom, io) {
     }
 
 }
+function clearAnswered(currentRoom, io) {
+    currentRoom.answerCount = 0;
+    currentRoom[currentRoom.roomID].map(user => {
+        user.answered = false;
+    })
+};
 module.exports = {
     beginGame: function (socket, io, allRoomInfo) {
         socket.on('beginGame', (getID) => {
@@ -50,13 +56,14 @@ module.exports = {
         })
     },
     gamePlaying: function (socket, io, allRoomInfo) {
-        const gameTimes = 10000000; // 设置游戏时间
+        const gameTimes = 60000; // 设置游戏时间
         // var drawerIndex = 0;//初始化drawer成员的index
         var globalChangeDrawer = null;//??暂时搁置这里
+        var roundTime = null;//全局初始化轮数计时器
         try {
             socket.on('gamePlaying', (roomIndex) => {
-                var globalChangeDrawer = null;// 暂时挪到gamePlaying上方
-                var roundTime = null;//全局初始化轮数计时器
+                // var globalChangeDrawer = null;// 暂时挪到gamePlaying上方
+
                 var rotateTimes = null;//全局初始化轮数
                 console.log('触发gamePlaying,来自: ' + socket.PLAYER_INFO.USER_NAME);
                 rotateTimes = 1;// 初始化当前是第一轮
@@ -83,27 +90,56 @@ module.exports = {
                                 rotateTimes = rotateTimes + 1;//进入第二轮
                                 console.log('进入了第二轮');
                                 drawerIndex = 0;//drawer设置为第一个玩家
-                                currentRoom.drawer = currentRoom[currentRoom.roomID][drawerIndex].player;//当前房间的drawer修改
-                                currentRoom.drawerIP = currentRoom[currentRoom.roomID][drawerIndex].playerIP;//当前房间的drawerIndex修改
-                                io.to(currentRoom.roomID).emit('updateAllroomInfo', JSON.stringify(allRoomInfo));//更换drawer的事件,只需要广播当前房间即可
-                                console.log('第94行调用');
-                                sendTopic(currentRoom, io); // 调用发送题目函数
+                                io.to(currentRoom.roomID).emit('getAnswer', currentRoom.topic)//发送答案
+                                setTimeout(function () {
+                                    try {
+                                        currentRoom.drawer = currentRoom[currentRoom.roomID][drawerIndex].player;//当前房间的drawer修改
+                                        currentRoom.drawerIP = currentRoom[currentRoom.roomID][drawerIndex].playerIP;//当前房间的drawerIndex修改
+                                        clearAnswered(currentRoom, io)// 调用清除记录方法
+                                        io.to(currentRoom.roomID).emit('updateAllroomInfo', JSON.stringify(allRoomInfo));//更换drawer的事件,只需要广播当前房间即可
+                                        console.log('第94行调用');
+                                        sendTopic(currentRoom, io); // 调用发送题目函数
+                                    } catch (error) {
+                                        console.log(error)
+                                    }
+
+                                }, 3000);
                                 return;
                             } else {//若已经到了第二轮 则退出房间 
                                 console.log('已经到了第二轮,当前rotateTimes的值为: ' + rotateTimes);
-                                currentRoom.roomStatus = "isReady";//修改房间状态
-                                io.sockets.emit('updateAllroomInfo', JSON.stringify(allRoomInfo));//也是要让主页收到信息
                                 clearInterval(roundTime);//清除循环
+                                io.to(currentRoom.roomID).emit('getAnswer', currentRoom.topic)//发送答案
+                                setTimeout(function () {
+                                    try {
+                                        currentRoom.roomStatus = "isReady";//修改房间状态
+                                        clearAnswered(currentRoom, io);
+                                        currentRoom[currentRoom.roomID].map(user => {
+                                            user.score = 0;
+                                        });
+                                        io.sockets.emit('updateAllroomInfo', JSON.stringify(allRoomInfo));//也是要让主页收到信息
+                                    } catch (error) {
+                                        console.log(error)
+                                    }
+
+                                }, 3000);
                                 return;
                             }
                         } else {
                             console.log('没有到最后一个玩家,当前drawer的Index是' + drawerIndex);
-                            drawerIndex++;//drawer设置为下一个玩家
-                            currentRoom.drawer = currentRoom[currentRoom.roomID][drawerIndex].player;
-                            currentRoom.drawerIP = currentRoom[currentRoom.roomID][drawerIndex].playerIP;
-                            io.to(currentRoom.roomID).emit('updateAllroomInfo', JSON.stringify(allRoomInfo));//更换drawer的事件,只需要广播当前房间即可
-                            console.log('第110行调用');
-                            sendTopic(currentRoom, io); // 调用发送题目函数
+                            io.to(currentRoom.roomID).emit('getAnswer', currentRoom.topic)//发送答案
+                            setTimeout(function () {
+                                try {
+                                    drawerIndex++;//drawer设置为下一个玩家
+                                    currentRoom.drawer = currentRoom[currentRoom.roomID][drawerIndex].player;
+                                    currentRoom.drawerIP = currentRoom[currentRoom.roomID][drawerIndex].playerIP;
+                                    clearAnswered(currentRoom, io);
+                                    io.to(currentRoom.roomID).emit('updateAllroomInfo', JSON.stringify(allRoomInfo));//更换drawer的事件,只需要广播当前房间即可
+                                    console.log('第110行调用');
+                                    sendTopic(currentRoom, io); // 调用发送题目函数
+                                } catch (error) {
+                                    console.log(error)
+                                }
+                            }, 3000);
                             return;
                         }
                     } else {//如果当前玩家退出了
@@ -114,28 +150,73 @@ module.exports = {
                             if (drawerIndex >= currentRoom[currentRoom.roomID].length) {//如果超出人数范围
                                 if (rotateTimes === 2) {
                                     console.log('最后一个玩家退出了 而且当前已经到了第二轮')
-                                    currentRoom.roomStatus = "isReady";//修改房间状态
-                                    io.sockets.emit('updateAllroomInfo', JSON.stringify(allRoomInfo));//也是要让主页收到信息
                                     clearInterval(roundTime);//清除循环
+                                    io.to(currentRoom.roomID).emit('getAnswer', currentRoom.topic)//发送答案
+                                    setTimeout(function () {
+                                        try {
+                                            currentRoom.roomStatus = "isReady";//修改房间状态
+                                            clearAnswered(currentRoom, io);
+                                            currentRoom[currentRoom.roomID].map(user => {
+                                                user.score = 0;
+                                            });
+                                            io.sockets.emit('updateAllroomInfo', JSON.stringify(allRoomInfo));//也是要让主页收到信息    
+                                        } catch (error) {
+                                            console.log(error)
+                                        }
+
+                                    }, 3000);
                                     return;
                                 } else {
                                     rotateTimes++;
                                     console.log('最后一个drawer退出了')
                                     drawerIndex = 0;//归零
-                                    console.log('第130行调用');
-                                    sendTopic(currentRoom, io); // 调用发送题目函数
-                                    // return;暂时注释掉
+                                    io.to(currentRoom.roomID).emit('getAnswer', currentRoom.topic)//发送答案
+                                    setTimeout(function () {
+                                        try {
+                                            console.log('drawer退出 将tempIndex赋值给drawerIndex,此时的drawerIndes值为' + drawerIndex);
+                                            console.log('curentRoom信息为');
+                                            console.log(currentRoom);
+                                            console.log('所以 这回的房间信息为');
+                                            console.log(currentRoom[currentRoom.roomID]);
+                                            currentRoom.drawer = currentRoom[currentRoom.roomID][drawerIndex].player;
+                                            currentRoom.drawerIP = currentRoom[currentRoom.roomID][drawerIndex].playerIP;
+                                            clearAnswered(currentRoom, io);
+                                            io.to(currentRoom.roomID).emit('updateAllroomInfo', JSON.stringify(allRoomInfo));//更换drawer的事件,只需要广播当前房间即可
+                                            console.log('第139行调用');
+                                            sendTopic(currentRoom, io); // 调用发送题目函数
+                                        } catch (error) {
+                                            console.log(error)
+                                        }
+
+                                    }, 3000);
+                                    // console.log('第130行调用');
+                                    // sendTopic(currentRoom, io); // 调用发送题目函数
+
+                                    return;
                                 }
+                            } else {
+                                io.to(currentRoom.roomID).emit('getAnswer', currentRoom.topic)//发送答案
+                                setTimeout(function () {
+                                    try {
+                                        console.log('drawer退出 将tempIndex赋值给drawerIndex,此时的drawerIndes值为' + drawerIndex);
+                                        console.log('curentRoom信息为');
+                                        console.log(currentRoom);
+                                        console.log('所以 这回的房间信息为');
+                                        console.log(currentRoom[currentRoom.roomID]);
+                                        currentRoom.drawer = currentRoom[currentRoom.roomID][drawerIndex].player;
+                                        currentRoom.drawerIP = currentRoom[currentRoom.roomID][drawerIndex].playerIP;
+                                        clearAnswered(currentRoom, io);
+                                        io.to(currentRoom.roomID).emit('updateAllroomInfo', JSON.stringify(allRoomInfo));//更换drawer的事件,只需要广播当前房间即可
+                                        console.log('第139行调用');
+                                        sendTopic(currentRoom, io); // 调用发送题目函数
+                                    } catch (error) {
+                                        console.log(error)
+                                    }
+
+                                }, 3000);
+                                return;
                             }
-                            console.log('drawer退出 将tempIndex赋值给drawerIndex,此时的drawerIndes值为' + drawerIndex);
-                            console.log('所以 这回的房间信息为');
-                            console.log(currentRoom[currentRoom.roomID]);
-                            currentRoom.drawer = currentRoom[currentRoom.roomID][drawerIndex].player;
-                            currentRoom.drawerIP = currentRoom[currentRoom.roomID][drawerIndex].playerIP;
-                            io.to(currentRoom.roomID).emit('updateAllroomInfo', JSON.stringify(allRoomInfo));//更换drawer的事件,只需要广播当前房间即可
-                            console.log('第139行调用');
-                            sendTopic(currentRoom, io); // 调用发送题目函数
-                            return;
+
                         } catch (error) {// 此处是为了捕获tempindex是否报错
                             console.log(error);
                         }
@@ -173,28 +254,32 @@ module.exports = {
                     console.log('触发sendAnswer');
                     var currentRoom = allRoomInfo[msg.roomIndex];//获取当前房间
                     if (msg.answer === currentRoom.topic) { // 如果玩家回答的问题正确
-                        if(socket.PLAYER_INFO.USER_IP === currentRoom.drawerIP){return;}//画你的画,别捣乱
-                        var findUser = currentRoom[currentRoom.roomID].find(user=>{//寻找对应答题用户
+                        if (socket.PLAYER_INFO.USER_IP === currentRoom.drawerIP) { return; }//画你的画,别捣乱
+                        var findUser = currentRoom[currentRoom.roomID].find(user => {//寻找对应答题用户
                             return socket.PLAYER_INFO.USER_IP === user.playerIP;
                         })
-                        var findDrawer = currentRoom[currentRoom.roomID].find(user=>{
+                        var findDrawer = currentRoom[currentRoom.roomID].find(user => {
                             return currentRoom.drawerIP === user.playerIP;
                         })
-                        if(findUser.answered === false){// 判断用户是不是已经答过题了
-                            if(currentRoom.answerCount === 0){//判断是不是第一个答对题的人
-                                findUser.score+=2;//加2分
-                            }else{
+                        if (findUser.answered === false) {// 判断用户是不是已经答过题了
+                            if (currentRoom.answerCount === 0) {//判断是不是第一个答对题的人
+                                findUser.score += 2;//加2分
+                            } else {
                                 findUser.score++;//加1分
                             }
                             findDrawer.score++;//drawer加分
                             findUser.answered = true;// 标记答题记录
                             currentRoom.answerCount++;// 标记当前房间答对题的人数
                         }
-                        
                         io.to(currentRoom.roomID).emit('updateAllroomInfo', JSON.stringify(allRoomInfo));//广播当前房间 更新用户
-                        if(currentRoom.answerCount === currentRoom[currentRoom.roomID].length-1){
-
-                        }
+                        // if (currentRoom.answerCount === currentRoom[currentRoom.roomID].length - 1) {//判断答题人数是不是满了
+                        //     console.log('答题人满')
+                        //     console.log(roundTime);
+                        //     console.log(globalChangeDrawer);
+                        //     clearInterval(roundTime);
+                        //     globalChangeDrawer();
+                        //     roundTime();
+                        // }
                     } else {
                         socket.to(socket.PLAYER_INFO.USER_ROOM_ID).emit('rpsSendAnswer', msg.answer);
                     }
